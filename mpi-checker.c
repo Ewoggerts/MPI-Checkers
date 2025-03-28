@@ -7,14 +7,9 @@
 #define MAX_DEPTH 8
 #define MAX_RANKS 64
 
-// 2d array representing checker board
-typedef struct {
-    int board[BOARD_SIZE][BOARD_SIZE]; // 8x8 board
-} Board;
-
-
 
 int main(int argc, char * argv[]){
+    Board boards[MAX_RANKS]; 
 
     // MPI Initalization
     MPI_Init(&argc, &argv);

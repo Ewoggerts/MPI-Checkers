@@ -25,7 +25,7 @@ Piece create_piece(char color, int row, int col) {
     return p;
 }
 
-void addPiece(PieceList* list, Piece newPiece) {
+void addPieceToList(PieceList* list, Piece newPiece) {
     if (list->count < 12) {
         list->pieces[list->count] = newPiece; // Store structure, not pointer
         list->count++;
@@ -132,10 +132,6 @@ Board copy_board(Board *original) {
     return new_board;
 }
 
-bool boards_equal(Board *a, Board *b) {
-    return memcmp(a->board, b->board, BOARD_SIZE * BOARD_SIZE * sizeof(char)) == 0;
-}
-
 void print_board(Board *board) {
     // Print column numbers
     printf("   ");
@@ -154,7 +150,6 @@ void print_board(Board *board) {
     }
 }
 
-
 PieceList index_pieces(Board board, char color) {
     PieceList pieces; 
     initializePieceList(&pieces);
@@ -163,7 +158,7 @@ PieceList index_pieces(Board board, char color) {
         for (int col = 0; col < BOARD_SIZE; col++) {
             if (board.board[row][col] == color || board.board[row][col] == toupper(color)) {
                 Piece newPiece = {row, col, board.board[row][col]};
-                addPiece(&pieces, newPiece);
+                addPieceToList(&pieces, newPiece);
             }
         }
     }
@@ -175,7 +170,7 @@ int isValidPos(int row, int col) {
     return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
 }
 
-void generate_captured_possibilities(Board board, Piece piece, BoardList *capture_results) {
+void single_captured_possibilities(Board board, Piece piece, BoardList *capture_results) {
     char opponentColor = (piece.color == 'b') ? 'r' : 'b';  
    
     int directions[4][2] = {
@@ -217,6 +212,10 @@ void generate_captured_possibilities(Board board, Piece piece, BoardList *captur
             }
         }
     }
+}
+
+void all_capture_possibilties(Board board, BoardList *all_capture_results){
+    
 }
 
 int main() {

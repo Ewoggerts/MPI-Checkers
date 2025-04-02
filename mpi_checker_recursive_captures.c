@@ -219,6 +219,43 @@ void generate_captured_possibilities(Board board, Piece piece, BoardList *captur
     }
 }
 
+void generate_nojump_possibilities(Board board, Piece piece, BoardList *capture_results){
+    char opponentColor = (piece.color == 'b') ? 'r' : 'b';  
+   
+    int directions[4][2] = {
+        {-1, -1}, {-1, 1},  // top left and top right
+        {1, -1}, {1, 1}     // bottom left and bottom right
+    };
+    
+    // Modify the directions if the piece color is 'b'
+    if (piece.color == 'b') {
+        // Swap the directions for the black pieces
+        directions[0][0] = 1;  directions[0][1] = -1;  // bottom left
+        directions[1][0] = 1;  directions[1][1] = 1;   // bottom right
+        directions[2][0] = -1; directions[2][1] = -1;  // top left
+        directions[3][0] = -1; directions[3][1] = 1;   // top right
+    }
+
+    // Checks if piece is a king, king's can move backwards
+    int lim = board.board[piece.row][piece.col] == toupper(piece.color) ? 4 : 2; 
+
+    for (int j = 0; j < lim; j++) {
+        int newRow = piece.row + directions[j][0];
+        int newCol = piece.col + directions[j][1];
+
+        // Valid capture
+        if (isValidPos(newRow, newCol) && board.board[newRow][newCol] != '.') {
+            Board new_board = copy_board(&board);
+            Piece new_piece = create_piece(piece.color, piece.row, piece.col);
+            if (newRow == 0 || newRow == BOARD_SIZE - 1){
+                new_piece = create_piece(toupper(piece.color), piece.row, piece.col);
+            }
+            move_piece(&new_board, new_piece, newRow,newCol);
+            add_to_board_list(capture_results, new_board);
+        }
+    }
+}
+
 int main() {
     // Initialize the board
     Board board = initial_board();

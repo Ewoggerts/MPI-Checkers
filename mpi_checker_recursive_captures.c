@@ -1,0 +1,319 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <ctype.h>  // For tolower()/toupper()
+
+#define BOARD_SIZE 8  // Standard checkers board size
+
+typedef struct {
+    int row;
+    int col;
+    char color;
+} Piece;
+
+typedef struct {
+    Piece pieces[12];
+    int count;
+} PieceList;
+
+Piece create_piece(char color, int row, int col) {
+    Piece p;
+    p.color = color;
+    p.row = row;
+    p.col = col;
+    return p;
+}
+
+void addPiece(PieceList* list, Piece newPiece) {
+    if (list->count < 12) {
+        list->pieces[list->count] = newPiece; // Store structure, not pointer
+        list->count++;
+    } else {
+        printf("Piece list is full! Cannot add more pieces.\n");
+    }
+}
+
+void initializePieceList(PieceList* list) {
+    list->count = 0; // Initialize count to 0
+}
+
+typedef struct {
+    char board[BOARD_SIZE][BOARD_SIZE];
+} Board;
+
+typedef struct {
+    Board* boards;
+    int count;
+    int capacity;
+} BoardList;
+
+Board move_piece(Board *board, Piece piece, int new_row, int new_col){
+    int row = piece.row;
+    int col = piece.col;
+    char color = piece.color;
+    
+    board->board[row][col] = '.';
+    board->board[new_row][new_col] = color;
+}
+
+Board remove_piece(Board *board, int row, int col){
+    board->board[row][col] = '.';
+}
+
+Board add_piece(Board *board, int row, int col, char color){
+    board->board[row][col] = color;
+}
+
+void init_board_list(BoardList* list, int initial_capacity) {
+    list->boards = (Board*)malloc(initial_capacity * sizeof(Board));
+    list->count = 0;
+    list->capacity = initial_capacity;
+}
+
+void free_board_list(BoardList* list) {
+    free(list->boards);
+    list->boards = NULL;
+    list->count = 0;
+    list->capacity = 0;
+}
+
+void add_to_board_list(BoardList* list, Board board) {
+    if (list->count >= list->capacity) {
+        list->capacity *= 2;
+        list->boards = (Board*)realloc(list->boards, list->capacity * sizeof(Board));
+    }
+    list->boards[list->count++] = board;
+}
+
+Board initial_board() {
+    Board board;
+    
+    for (int row = 0; row < BOARD_SIZE; row++) {
+        for (int col = 0; col < BOARD_SIZE; col++) {
+            remove_piece(&board, row, col);
+        }
+    }
+
+    for (int row = 5; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+            if ((row + col) % 2 == 1) {  
+                add_piece(&board, row, col, 'b');
+            }
+        }
+    }
+
+    for (int row = 0; row < 3; row++) {
+        for (int col = 0; col < 8; col++) {
+            if ((row + col) % 2 == 1) {  
+                add_piece(&board, row, col, 'r');
+            }
+        }
+    }
+
+    return board;
+}
+
+Board initial_blank_board() {
+    Board board;
+    
+    for (int row = 0; row < BOARD_SIZE; row++) {
+        for (int col = 0; col < BOARD_SIZE; col++) {
+            remove_piece(&board, row, col);
+        }
+    }
+    
+    return board;
+}
+
+Board copy_board(Board *original) {
+    Board new_board;
+    memcpy(&new_board.board, &original->board, BOARD_SIZE * BOARD_SIZE * sizeof(char));
+    return new_board;
+}
+
+bool boards_equal(Board *a, Board *b) {
+    return memcmp(a->board, b->board, BOARD_SIZE * BOARD_SIZE * sizeof(char)) == 0;
+}
+
+void print_board(Board *board) {
+    // Print column numbers
+    printf("   ");
+    for (int col = 0; col < 8; col++) {
+        printf("%d ", col);
+    }
+    printf("\n");
+
+    // Print row numbers and the grid
+    for (int row = 0; row < 8; row++) {
+        printf("%d  ", row);  // Row numbers
+        for (int col = 0; col < 8; col++) {
+            printf("%c ", board->board[row][col]);
+        }
+        printf("\n");
+    }
+}
+
+
+PieceList index_pieces(Board board, char color) {
+    PieceList pieces; 
+    initializePieceList(&pieces);
+
+    for (int row = 0; row < BOARD_SIZE; row++) {
+        for (int col = 0; col < BOARD_SIZE; col++) {
+            if (board.board[row][col] == color || board.board[row][col] == toupper(color)) {
+                Piece newPiece = {row, col, board.board[row][col]};
+                addPiece(&pieces, newPiece);
+            }
+        }
+    }
+    
+    return pieces;
+}
+
+int isValidPos(int row, int col) {
+    return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
+}
+
+void generate_captured_possibilities(Board board, Piece piece, BoardList *capture_results) {
+    char opponentColor = (piece.color == 'b') ? 'r' : 'b';  
+   
+    int directions[4][2] = {
+        {-2, -2}, {-2, 2},  // top left and top right
+        {2, -2}, {2, 2}     // bottom left and bottom right
+    };
+    
+    // Modify the directions if the piece color is 'b'
+    if (piece.color == 'b') {
+        // Swap the directions for the black pieces
+        directions[0][0] = 2;  directions[0][1] = -2;  // bottom left
+        directions[1][0] = 2;  directions[1][1] = 2;   // bottom right
+        directions[2][0] = -2; directions[2][1] = -2;  // top left
+        directions[3][0] = -2; directions[3][1] = 2;   // top right
+    }
+
+    // Checks if piece is a king, king's can move backwards
+    int lim = board.board[piece.row][piece.col] == toupper(piece.color) ? 4 : 2; 
+
+    for (int j = 0; j < lim; j++) {
+        int newRow = piece.row + directions[j][0];
+        int newCol = piece.col + directions[j][1];
+        int middleRow = piece.row + directions[j][0] / 2;
+        int middleCol = piece.col + directions[j][1] / 2;
+
+        // Valid capture
+        if (isValidPos(newRow, newCol) && isValidPos(middleRow, middleCol)) {
+            if (board.board[middleRow][middleCol] == opponentColor || 
+                board.board[middleRow][middleCol] == toupper(opponentColor)) {
+                Board new_board = copy_board(&board);
+                Piece new_piece = create_piece(piece.color, newRow, newCol);
+                if (newRow == 0 || newRow == BOARD_SIZE - 1){
+                    new_piece = create_piece(toupper(piece.color), piece.row, piece.col);
+                }
+                move_piece(&new_board, new_piece, newRow,newCol);
+                remove_piece(&new_board, middleRow, middleCol);
+                add_to_board_list(capture_results, new_board);
+                generate_captured_possibilities(new_board, new_piece, capture_results);
+            }
+        }
+    }
+}
+
+int main() {
+    // Initialize the board
+    Board board = initial_board();
+    printf("Initial Board:\n");
+    print_board(&board);
+
+    // Index all red pieces
+    PieceList red_pieces = index_pieces(board, 'r');
+    printf("Indexed %d red pieces:\n\n", red_pieces.count);
+    for (int i = 0; i < red_pieces.count; i++) {
+        printf("Red Piece %d: (%d, %d)\n", i + 1, red_pieces.pieces[i].row, red_pieces.pieces[i].col);
+    }
+
+    printf("\n");
+
+    // Index all black pieces
+    PieceList black_pieces = index_pieces(board, 'b');
+    printf("Indexed %d black pieces:\n\n", black_pieces.count);
+    for (int i = 0; i < black_pieces.count; i++) {
+        printf("Black Piece %d: (%d, %d)\n", i + 1, black_pieces.pieces[i].row, black_pieces.pieces[i].col);
+    }
+
+    // Test moving a piece
+    if (red_pieces.count > 0) {
+        Piece test_piece = red_pieces.pieces[0];
+        printf("\nMoving first red piece from (%d, %d)...\n", test_piece.row, test_piece.col);
+        
+        int new_row = test_piece.row + 1;
+        int new_col = test_piece.col + 1;
+
+        if (isValidPos(new_row, new_col)) {
+            move_piece(&board, test_piece, new_row, new_col);
+            printf("Board after moving piece:\n");
+            print_board(&board);
+        }
+    }
+
+    // Test removing a piece
+    if (black_pieces.count > 0) {
+        Piece test_piece = black_pieces.pieces[0];
+        printf("\nRemoving first black piece at (%d, %d)...\n", test_piece.row, test_piece.col);
+        remove_piece(&board, test_piece.row, test_piece.col);
+        printf("Board after removing piece:\n");
+        print_board(&board);
+    }
+
+    printf("\n----------------------------------------------------------------------------\n");
+
+    // Changing to custom board for tests ----------------------------------------------------------------------------------------
+    board = initial_blank_board();
+    add_piece(&board, 5, 1, 'b');
+    add_piece(&board, 6, 2, 'r');
+    add_piece(&board, 3, 1, 'b');
+    
+    // Index all red pieces
+    red_pieces = index_pieces(board, 'r');
+    printf("Indexed %d red pieces:\n\n", red_pieces.count);
+    for (int i = 0; i < red_pieces.count; i++) {
+        printf("Red Piece %d: (%d, %d)\n", i + 1, red_pieces.pieces[i].row, red_pieces.pieces[i].col);
+    }
+
+    // Index all black pieces
+    black_pieces = index_pieces(board, 'b');
+    printf("Indexed %d black pieces:\n\n", black_pieces.count);
+    for (int i = 0; i < black_pieces.count; i++) {
+        printf("Black Piece %d: (%d, %d)\n", i + 1, black_pieces.pieces[i].row, black_pieces.pieces[i].col);
+    }
+    
+    // Test capturing possibilities
+    BoardList capture_results;
+    init_board_list(&capture_results, 5);
+
+    printf("\nTEST Board:\n");
+    print_board(&board);
+
+    if (red_pieces.count > 0) {
+        printf("\nGenerating capture possibilities for first red piece...\n");
+        generate_captured_possibilities(board, red_pieces.pieces[0], &capture_results);
+    }
+
+    if (black_pieces.count > 0) {
+        printf("\nGenerating capture possibilities for second black piece...\n");
+        generate_captured_possibilities(board, black_pieces.pieces[1], &capture_results);
+    }
+
+    // Print all possible captured boards
+    printf("\nGenerated %d capture possibilities:\n", capture_results.count);
+    for (int i = 0; i < capture_results.count; i++) {
+        printf("Capture Possibility %d:\n", i + 1);
+        print_board(&capture_results.boards[i]);
+    }
+
+    // Clean up dynamically allocated memory
+    free_board_list(&capture_results);
+
+    return 0;
+}
+

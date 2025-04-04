@@ -200,15 +200,18 @@ void single_captured_possibilities(Board board, Piece piece, BoardList *capture_
         if (isValidPos(newRow, newCol) && isValidPos(middleRow, middleCol)) {
             if (board.board[middleRow][middleCol] == opponentColor || 
                 board.board[middleRow][middleCol] == toupper(opponentColor)) {
+                    
                 Board new_board = copy_board(&board);
                 Piece new_piece = create_piece(piece.color, newRow, newCol);
+
                 if (newRow == 0 || newRow == BOARD_SIZE - 1){
                     new_piece = create_piece(toupper(piece.color), piece.row, piece.col);
                 }
+
                 move_piece(&new_board, new_piece, newRow,newCol);
                 remove_piece(&new_board, middleRow, middleCol);
                 add_to_board_list(capture_results, new_board);
-                generate_captured_possibilities(new_board, new_piece, capture_results);
+                single_captured_possibilities(new_board, new_piece, capture_results);
             }
         }
     }
@@ -295,12 +298,12 @@ int main() {
 
     if (red_pieces.count > 0) {
         printf("\nGenerating capture possibilities for first red piece...\n");
-        generate_captured_possibilities(board, red_pieces.pieces[0], &capture_results);
+        single_captured_possibilities(board, red_pieces.pieces[0], &capture_results);
     }
 
     if (black_pieces.count > 0) {
         printf("\nGenerating capture possibilities for second black piece...\n");
-        generate_captured_possibilities(board, black_pieces.pieces[1], &capture_results);
+        single_captured_possibilities(board, black_pieces.pieces[1], &capture_results);
     }
 
     // Print all possible captured boards

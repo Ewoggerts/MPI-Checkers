@@ -218,7 +218,10 @@ void single_captured_possibilities(Board board, Piece piece, BoardList *capture_
 }
 
 void all_capture_possibilties(Board board, BoardList *all_capture_results){
-    
+    PieceList all_pieces = index_pieces(board, 'b');
+    for (unsigned int i = 0; i < all_pieces.count; i++){
+        single_captured_possibilities(board, all_pieces.pieces[i], &all_capture_results);
+    }
 }
 
 void generate_nojump_possibilities(Board board, Piece piece, BoardList *capture_results){
@@ -245,7 +248,7 @@ void generate_nojump_possibilities(Board board, Piece piece, BoardList *capture_
         int newRow = piece.row + directions[j][0];
         int newCol = piece.col + directions[j][1];
 
-        // Valid capture
+        // Valid move
         if (isValidPos(newRow, newCol) && board.board[newRow][newCol] != '.') {
             Board new_board = copy_board(&board);
             Piece new_piece = create_piece(piece.color, piece.row, piece.col);

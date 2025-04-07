@@ -17,12 +17,30 @@ typedef struct {
     int count;
 } PieceList;
 
+typedef struct {
+    char board[BOARD_SIZE][BOARD_SIZE];
+} Board;
+
+typedef struct {
+    Board* boards;
+    int count;
+    int capacity;
+} BoardList;
+
 Piece create_piece(char color, int row, int col) {
     Piece p;
     p.color = color;
     p.row = row;
     p.col = col;
     return p;
+}
+
+Board remove_piece(Board *board, int row, int col){
+    board->board[row][col] = '.';
+}
+
+void initializePieceList(PieceList* list) {
+    list->count = 0; // Initialize count to 0
 }
 
 void addPieceToList(PieceList* list, Piece newPiece) {
@@ -34,56 +52,8 @@ void addPieceToList(PieceList* list, Piece newPiece) {
     }
 }
 
-void initializePieceList(PieceList* list) {
-    list->count = 0; // Initialize count to 0
-}
-
-typedef struct {
-    char board[BOARD_SIZE][BOARD_SIZE];
-} Board;
-
-typedef struct {
-    Board* boards;
-    int count;
-    int capacity;
-} BoardList;
-
-Board move_piece(Board *board, Piece piece, int new_row, int new_col){
-    int row = piece.row;
-    int col = piece.col;
-    char color = piece.color;
-    
-    board->board[row][col] = '.';
-    board->board[new_row][new_col] = color;
-}
-
-Board remove_piece(Board *board, int row, int col){
-    board->board[row][col] = '.';
-}
-
-Board add_piece(Board *board, int row, int col, char color){
+Board add_piece_to_board(Board *board, int row, int col, char color){
     board->board[row][col] = color;
-}
-
-void init_board_list(BoardList* list, int initial_capacity) {
-    list->boards = (Board*)malloc(initial_capacity * sizeof(Board));
-    list->count = 0;
-    list->capacity = initial_capacity;
-}
-
-void free_board_list(BoardList* list) {
-    free(list->boards);
-    list->boards = NULL;
-    list->count = 0;
-    list->capacity = 0;
-}
-
-void add_to_board_list(BoardList* list, Board board) {
-    if (list->count >= list->capacity) {
-        list->capacity *= 2;
-        list->boards = (Board*)realloc(list->boards, list->capacity * sizeof(Board));
-    }
-    list->boards[list->count++] = board;
 }
 
 Board initial_board() {
@@ -98,7 +68,7 @@ Board initial_board() {
     for (int row = 5; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
             if ((row + col) % 2 == 1) {  
-                add_piece(&board, row, col, 'b');
+                add_piece_to_board(&board, row, col, 'b');
             }
         }
     }
@@ -106,7 +76,7 @@ Board initial_board() {
     for (int row = 0; row < 3; row++) {
         for (int col = 0; col < 8; col++) {
             if ((row + col) % 2 == 1) {  
-                add_piece(&board, row, col, 'r');
+                add_piece_to_board(&board, row, col, 'r');
             }
         }
     }
@@ -148,6 +118,36 @@ void print_board(Board *board) {
         }
         printf("\n");
     }
+}
+
+Board move_piece(Board *board, Piece piece, int new_row, int new_col){
+    int row = piece.row;
+    int col = piece.col;
+    char color = piece.color;
+    
+    board->board[row][col] = '.';
+    board->board[new_row][new_col] = color;
+}
+
+void init_board_list(BoardList* list, int initial_capacity) {
+    list->boards = (Board*)malloc(initial_capacity * sizeof(Board));
+    list->count = 0;
+    list->capacity = initial_capacity;
+}
+
+void free_board_list(BoardList* list) {
+    free(list->boards);
+    list->boards = NULL;
+    list->count = 0;
+    list->capacity = 0;
+}
+
+void add_to_board_list(BoardList* list, Board board) {
+    if (list->count >= list->capacity) {
+        list->capacity *= 2;
+        list->boards = (Board*)realloc(list->boards, list->capacity * sizeof(Board));
+    }
+    list->boards[list->count++] = board;
 }
 
 PieceList index_pieces(Board board, char color) {
@@ -217,10 +217,10 @@ void single_captured_possibilities(Board board, Piece piece, BoardList *capture_
     }
 }
 
-void all_capture_possibilties(Board board, BoardList *all_capture_results){
-    PieceList all_pieces = index_pieces(board, 'b');
+void all_capture_possibilties(Board board, char color, BoardList *all_capture_results){
+    PieceList all_pieces = index_pieces(board, color);
     for (unsigned int i = 0; i < all_pieces.count; i++){
-        single_captured_possibilities(board, all_pieces.pieces[i], &all_capture_results);
+        single_captured_possibilities(board, all_pieces.pieces[i], all_capture_results);
     }
 }
 
@@ -258,6 +258,33 @@ void generate_nojump_possibilities(Board board, Piece piece, BoardList *capture_
             move_piece(&new_board, new_piece, newRow,newCol);
             add_to_board_list(capture_results, new_board);
         }
+    }
+}
+
+void all_nojump_posibilities(Board board, char color, BoardList *all_nojump_results){
+    PieceList all_pieces = index_pieces(board, color);
+    for (unsigned int i = 0; i < all_pieces.count; i++){
+        single_captured_possibilities(board, all_pieces.pieces[i], all_nojump_results);
+    }
+}
+
+// For simplicities sake, red moves first then black
+// 1 move ahead is two plies
+void predict_all_moves(int moves_ahead, Board inital_board, Board final_possibilities){
+    BoardList current_turn;
+    add_to_board_list(&current_turn, inital_board);
+    for(unsigned int turn; turn < moves_ahead; turn++){
+        BoardList first_ply;
+        for(unsigned int i; i < current_turn.count; i++){
+            all_nojump_posibilities(current_turn.boards[i], 'r', &first_ply);
+            all_capture_possibilties(current_turn.boards[i], 'r', &first_ply);
+        }
+        BoardList second_ply;
+        for(unsigned int i; i < first_ply.count; i++){
+            all_nojump_posibilities(first_ply.boards[i], 'b', &second_ply);
+            all_capture_possibilties(first_ply.boards[i], 'b', &second_ply);
+        }
+        current_turn = second_ply;
     }
 }
 
@@ -311,9 +338,9 @@ int main() {
 
     // Changing to custom board for tests ----------------------------------------------------------------------------------------
     board = initial_blank_board();
-    add_piece(&board, 5, 1, 'b');
-    add_piece(&board, 6, 2, 'r');
-    add_piece(&board, 3, 1, 'b');
+    add_piece_to_board(&board, 5, 1, 'b');
+    add_piece_to_board(&board, 6, 2, 'r');
+    add_piece_to_board(&board, 3, 1, 'b');
     
     // Index all red pieces
     red_pieces = index_pieces(board, 'r');

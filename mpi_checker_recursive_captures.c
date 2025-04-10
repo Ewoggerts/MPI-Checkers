@@ -225,7 +225,6 @@ void all_capture_possibilties(Board board, char color, BoardList *all_capture_re
 }
 
 void generate_nojump_possibilities(Board board, Piece piece, BoardList *capture_results){
-    char opponentColor = (piece.color == 'b') ? 'r' : 'b';  
    
     int directions[4][2] = {
         {-1, -1}, {-1, 1},  // top left and top right
@@ -270,7 +269,7 @@ void all_nojump_posibilities(Board board, char color, BoardList *all_nojump_resu
 
 // For simplicities sake, red moves first then black
 // 1 move ahead is two plies
-void predict_all_moves(int moves_ahead, Board inital_board, Board final_possibilities){
+void predict_all_moves(int moves_ahead, Board inital_board, BoardList final_possibilities){
     BoardList current_turn;
     add_to_board_list(&current_turn, &inital_board);
     for(int turn; turn < moves_ahead; turn++){
@@ -286,6 +285,7 @@ void predict_all_moves(int moves_ahead, Board inital_board, Board final_possibil
         }
         current_turn = second_ply;
     }
+    final_possibilities = current_turn;
 }
 
 int main() {

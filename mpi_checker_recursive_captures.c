@@ -136,6 +136,9 @@ void init_board_list(BoardList* list, int initial_capacity) {
 }
 
 void free_board_list(BoardList* list) {
+    for (unsigned int i = 0; i < list->count; ++i) {
+        free(list->boards[i]);  
+    }
     free(list->boards);
     list->boards = NULL;
     list->count = 0;
@@ -147,7 +150,9 @@ void add_to_board_list(BoardList* list, Board* board) {
         list->capacity *= 2;
         list->boards = (Board**)realloc(list->boards, list->capacity * sizeof(Board*));
     }
-    list->boards[list->count++] = board;
+    Board* copy = (Board*)malloc(sizeof(Board));
+    memcpy(copy, board, sizeof(Board));
+    list->boards[list->count++] = copy;
 }
 
 PieceList index_pieces(Board board, char color) {

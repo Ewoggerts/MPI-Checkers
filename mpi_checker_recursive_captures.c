@@ -22,7 +22,7 @@ typedef struct {
 } Board;
 
 typedef struct {
-    Board* boards;
+    Board** boards;
     int count;
     int capacity;
 } BoardList;
@@ -130,7 +130,7 @@ Board move_piece(Board *board, Piece piece, int new_row, int new_col){
 }
 
 void init_board_list(BoardList* list, int initial_capacity) {
-    list->boards = (Board*)malloc(initial_capacity * sizeof(Board));
+    list->boards = malloc(initial_capacity * sizeof(Board*));
     list->count = 0;
     list->capacity = initial_capacity;
 }
@@ -142,10 +142,10 @@ void free_board_list(BoardList* list) {
     list->capacity = 0;
 }
 
-void add_to_board_list(BoardList* list, Board board) {
+void add_to_board_list(BoardList* list, Board* board) {
     if (list->count >= list->capacity) {
         list->capacity *= 2;
-        list->boards = (Board*)realloc(list->boards, list->capacity * sizeof(Board));
+        list->boards = realloc(list->boards, list->capacity * sizeof(Board*));
     }
     list->boards[list->count++] = board;
 }
@@ -210,7 +210,7 @@ void single_captured_possibilities(Board board, Piece piece, BoardList *capture_
 
                 move_piece(&new_board, new_piece, newRow,newCol);
                 remove_piece(&new_board, middleRow, middleCol);
-                add_to_board_list(capture_results, new_board);
+                add_to_board_list(capture_results, &new_board);
                 single_captured_possibilities(new_board, new_piece, capture_results);
             }
         }
@@ -256,7 +256,7 @@ void generate_nojump_possibilities(Board board, Piece piece, BoardList *capture_
                 new_piece = create_piece(toupper(piece.color), piece.row, piece.col);
             }
             move_piece(&new_board, new_piece, newRow,newCol);
-            add_to_board_list(capture_results, new_board);
+            add_to_board_list(capture_results, &new_board);
         }
     }
 }
@@ -272,17 +272,17 @@ void all_nojump_posibilities(Board board, char color, BoardList *all_nojump_resu
 // 1 move ahead is two plies
 void predict_all_moves(int moves_ahead, Board inital_board, Board final_possibilities){
     BoardList current_turn;
-    add_to_board_list(&current_turn, inital_board);
+    add_to_board_list(&current_turn, &inital_board);
     for(unsigned int turn; turn < moves_ahead; turn++){
         BoardList first_ply;
         for(unsigned int i; i < current_turn.count; i++){
-            all_nojump_posibilities(current_turn.boards[i], 'r', &first_ply);
-            all_capture_possibilties(current_turn.boards[i], 'r', &first_ply);
+            all_nojump_posibilities(*current_turn.boards[i], 'r', &first_ply);
+            all_capture_possibilties(*current_turn.boards[i], 'r', &first_ply);
         }
         BoardList second_ply;
         for(unsigned int i; i < first_ply.count; i++){
-            all_nojump_posibilities(first_ply.boards[i], 'b', &second_ply);
-            all_capture_possibilties(first_ply.boards[i], 'b', &second_ply);
+            all_nojump_posibilities(*first_ply.boards[i], 'b', &second_ply);
+            all_capture_possibilties(*first_ply.boards[i], 'b', &second_ply);
         }
         current_turn = second_ply;
     }

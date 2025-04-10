@@ -35,7 +35,7 @@ Piece create_piece(char color, int row, int col) {
     return p;
 }
 
-Board remove_piece(Board *board, int row, int col){
+void remove_piece(Board *board, int row, int col){
     board->board[row][col] = '.';
 }
 
@@ -52,7 +52,7 @@ void addPieceToList(PieceList* list, Piece newPiece) {
     }
 }
 
-Board add_piece_to_board(Board *board, int row, int col, char color){
+void add_piece_to_board(Board *board, int row, int col, char color){
     board->board[row][col] = color;
 }
 
@@ -120,7 +120,7 @@ void print_board(Board *board) {
     }
 }
 
-Board move_piece(Board *board, Piece piece, int new_row, int new_col){
+void move_piece(Board *board, Piece piece, int new_row, int new_col){
     int row = piece.row;
     int col = piece.col;
     char color = piece.color;

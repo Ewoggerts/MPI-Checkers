@@ -120,10 +120,14 @@ void print_board(Board *board) {
     }
 }
 
-void move_piece(Board *board, Piece piece, int new_row, int new_col){
-    int row = piece.row;
-    int col = piece.col;
-    char color = piece.color;
+void move_piece(Board *board, Piece *piece, int new_row, int new_col){
+    int row = piece->row;
+    int col = piece->col;
+    char color = piece->color;
+
+    // Move the piece's position
+    piece->row = new_row;
+    piece->col = new_col;
     
     board->board[row][col] = '.';
     board->board[new_row][new_col] = color;
@@ -213,7 +217,7 @@ void single_captured_possibilities(Board board, Piece piece, BoardList *capture_
                     new_piece = create_piece(toupper(piece.color), piece.row, piece.col);
                 }
 
-                move_piece(&new_board, new_piece, newRow,newCol);
+                move_piece(&new_board, &new_piece, newRow,newCol);
                 remove_piece(&new_board, middleRow, middleCol);
                 add_to_board_list(capture_results, &new_board);
                 single_captured_possibilities(new_board, new_piece, capture_results);
@@ -259,7 +263,7 @@ void generate_nojump_possibilities(Board board, Piece piece, BoardList *capture_
             if (newRow == 0 || newRow == BOARD_SIZE - 1){
                 new_piece = create_piece(toupper(piece.color), piece.row, piece.col);
             }
-            move_piece(&new_board, new_piece, newRow,newCol);
+            move_piece(&new_board, &new_piece, newRow,newCol);
             add_to_board_list(capture_results, &new_board);
         }
     }
@@ -324,7 +328,7 @@ int main() {
         int new_col = test_piece.col + 1;
 
         if (isValidPos(new_row, new_col)) {
-            move_piece(&board, test_piece, new_row, new_col);
+            move_piece(&board, &test_piece, new_row, new_col);
             printf("Board after moving piece:\n");
             print_board(&board);
         }

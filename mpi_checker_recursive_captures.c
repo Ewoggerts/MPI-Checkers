@@ -272,7 +272,7 @@ void generate_nojump_possibilities(Board board, Piece piece, BoardList *capture_
 void all_nojump_posibilities(Board board, char color, BoardList *all_nojump_results){
     PieceList all_pieces = index_pieces(board, color);
     for (unsigned int i = 0; i < all_pieces.count; i++){
-        single_captured_possibilities(board, all_pieces.pieces[i], all_nojump_results);
+        generate_nojump_possibilities(board, all_pieces.pieces[i], all_nojump_results);
     }
 }
 

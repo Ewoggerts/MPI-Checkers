@@ -14,7 +14,7 @@ typedef struct {
 
 typedef struct {
     Piece pieces[12];
-    int count;
+    unsigned int count;
 } PieceList;
 
 typedef struct {
@@ -22,9 +22,9 @@ typedef struct {
 } Board;
 
 typedef struct {
-    Board* boards;
-    int count;
-    int capacity;
+    Board** boards;
+    unsigned int count;
+    unsigned int capacity;
 } BoardList;
 
 Piece create_piece(char color, int row, int col) {
@@ -35,7 +35,7 @@ Piece create_piece(char color, int row, int col) {
     return p;
 }
 
-Board remove_piece(Board *board, int row, int col){
+void remove_piece(Board *board, int row, int col){
     board->board[row][col] = '.';
 }
 
@@ -52,7 +52,7 @@ void addPieceToList(PieceList* list, Piece newPiece) {
     }
 }
 
-Board add_piece_to_board(Board *board, int row, int col, char color){
+void add_piece_to_board(Board *board, int row, int col, char color){
     board->board[row][col] = color;
 }
 
@@ -120,7 +120,7 @@ void print_board(Board *board) {
     }
 }
 
-Board move_piece(Board *board, Piece piece, int new_row, int new_col){
+void move_piece(Board *board, Piece piece, int new_row, int new_col){
     int row = piece.row;
     int col = piece.col;
     char color = piece.color;
@@ -130,24 +130,29 @@ Board move_piece(Board *board, Piece piece, int new_row, int new_col){
 }
 
 void init_board_list(BoardList* list, int initial_capacity) {
-    list->boards = (Board*)malloc(initial_capacity * sizeof(Board));
+    list->boards = (Board**)malloc(initial_capacity * sizeof(Board*));
     list->count = 0;
     list->capacity = initial_capacity;
 }
 
 void free_board_list(BoardList* list) {
+    for (unsigned int i = 0; i < list->count; ++i) {
+        free(list->boards[i]);  
+    }
     free(list->boards);
     list->boards = NULL;
     list->count = 0;
     list->capacity = 0;
 }
 
-void add_to_board_list(BoardList* list, Board board) {
+void add_to_board_list(BoardList* list, Board* board) {
     if (list->count >= list->capacity) {
         list->capacity *= 2;
-        list->boards = (Board*)realloc(list->boards, list->capacity * sizeof(Board));
+        list->boards = (Board**)realloc(list->boards, list->capacity * sizeof(Board*));
     }
-    list->boards[list->count++] = board;
+    Board* copy = (Board*)malloc(sizeof(Board));
+    memcpy(copy, board, sizeof(Board));
+    list->boards[list->count++] = copy;
 }
 
 PieceList index_pieces(Board board, char color) {
@@ -210,7 +215,7 @@ void single_captured_possibilities(Board board, Piece piece, BoardList *capture_
 
                 move_piece(&new_board, new_piece, newRow,newCol);
                 remove_piece(&new_board, middleRow, middleCol);
-                add_to_board_list(capture_results, new_board);
+                add_to_board_list(capture_results, &new_board);
                 single_captured_possibilities(new_board, new_piece, capture_results);
             }
         }
@@ -225,7 +230,6 @@ void all_capture_possibilties(Board board, char color, BoardList *all_capture_re
 }
 
 void generate_nojump_possibilities(Board board, Piece piece, BoardList *capture_results){
-    char opponentColor = (piece.color == 'b') ? 'r' : 'b';  
    
     int directions[4][2] = {
         {-1, -1}, {-1, 1},  // top left and top right
@@ -256,7 +260,7 @@ void generate_nojump_possibilities(Board board, Piece piece, BoardList *capture_
                 new_piece = create_piece(toupper(piece.color), piece.row, piece.col);
             }
             move_piece(&new_board, new_piece, newRow,newCol);
-            add_to_board_list(capture_results, new_board);
+            add_to_board_list(capture_results, &new_board);
         }
     }
 }
@@ -270,22 +274,23 @@ void all_nojump_posibilities(Board board, char color, BoardList *all_nojump_resu
 
 // For simplicities sake, red moves first then black
 // 1 move ahead is two plies
-void predict_all_moves(int moves_ahead, Board inital_board, Board final_possibilities){
+void predict_all_moves(int moves_ahead, Board inital_board, BoardList final_possibilities){
     BoardList current_turn;
-    add_to_board_list(&current_turn, inital_board);
-    for(unsigned int turn; turn < moves_ahead; turn++){
+    add_to_board_list(&current_turn, &inital_board);
+    for(int turn; turn < moves_ahead; turn++){
         BoardList first_ply;
         for(unsigned int i; i < current_turn.count; i++){
-            all_nojump_posibilities(current_turn.boards[i], 'r', &first_ply);
-            all_capture_possibilties(current_turn.boards[i], 'r', &first_ply);
+            all_nojump_posibilities(*current_turn.boards[i], 'r', &first_ply);
+            all_capture_possibilties(*current_turn.boards[i], 'r', &first_ply);
         }
         BoardList second_ply;
         for(unsigned int i; i < first_ply.count; i++){
-            all_nojump_posibilities(first_ply.boards[i], 'b', &second_ply);
-            all_capture_possibilties(first_ply.boards[i], 'b', &second_ply);
+            all_nojump_posibilities(*first_ply.boards[i], 'b', &second_ply);
+            all_capture_possibilties(*first_ply.boards[i], 'b', &second_ply);
         }
         current_turn = second_ply;
     }
+    final_possibilities = current_turn;
 }
 
 int main() {
@@ -297,7 +302,7 @@ int main() {
     // Index all red pieces
     PieceList red_pieces = index_pieces(board, 'r');
     printf("Indexed %d red pieces:\n\n", red_pieces.count);
-    for (int i = 0; i < red_pieces.count; i++) {
+    for (unsigned int i = 0; i < red_pieces.count; i++) {
         printf("Red Piece %d: (%d, %d)\n", i + 1, red_pieces.pieces[i].row, red_pieces.pieces[i].col);
     }
 
@@ -306,7 +311,7 @@ int main() {
     // Index all black pieces
     PieceList black_pieces = index_pieces(board, 'b');
     printf("Indexed %d black pieces:\n\n", black_pieces.count);
-    for (int i = 0; i < black_pieces.count; i++) {
+    for (unsigned int i = 0; i < black_pieces.count; i++) {
         printf("Black Piece %d: (%d, %d)\n", i + 1, black_pieces.pieces[i].row, black_pieces.pieces[i].col);
     }
 
@@ -345,14 +350,14 @@ int main() {
     // Index all red pieces
     red_pieces = index_pieces(board, 'r');
     printf("Indexed %d red pieces:\n\n", red_pieces.count);
-    for (int i = 0; i < red_pieces.count; i++) {
+    for (unsigned int i = 0; i < red_pieces.count; i++) {
         printf("Red Piece %d: (%d, %d)\n", i + 1, red_pieces.pieces[i].row, red_pieces.pieces[i].col);
     }
 
     // Index all black pieces
     black_pieces = index_pieces(board, 'b');
     printf("Indexed %d black pieces:\n\n", black_pieces.count);
-    for (int i = 0; i < black_pieces.count; i++) {
+    for (unsigned int i = 0; i < black_pieces.count; i++) {
         printf("Black Piece %d: (%d, %d)\n", i + 1, black_pieces.pieces[i].row, black_pieces.pieces[i].col);
     }
     
@@ -375,9 +380,9 @@ int main() {
 
     // Print all possible captured boards
     printf("\nGenerated %d capture possibilities:\n", capture_results.count);
-    for (int i = 0; i < capture_results.count; i++) {
+    for (unsigned int i = 0; i < capture_results.count; i++) {
         printf("Capture Possibility %d:\n", i + 1);
-        print_board(&capture_results.boards[i]);
+        print_board(capture_results.boards[i]);
     }
 
     // Clean up dynamically allocated memory

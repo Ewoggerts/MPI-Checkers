@@ -253,7 +253,7 @@ void generate_nojump_possibilities(Board board, Piece piece, BoardList *capture_
         int newCol = piece.col + directions[j][1];
 
         // Valid move
-        if (isValidPos(newRow, newCol) && board.board[newRow][newCol] != '.') {
+        if (isValidPos(newRow, newCol) && board.board[newRow][newCol] == '.') {
             Board new_board = copy_board(&board);
             Piece new_piece = create_piece(piece.color, piece.row, piece.col);
             if (newRow == 0 || newRow == BOARD_SIZE - 1){

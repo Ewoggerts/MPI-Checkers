@@ -207,7 +207,7 @@ void single_captured_possibilities(Board board, Piece piece, BoardList *capture_
                 board.board[middleRow][middleCol] == toupper(opponentColor)) {
                     
                 Board new_board = copy_board(&board);
-                Piece new_piece = create_piece(piece.color, newRow, newCol);
+                Piece new_piece = create_piece(piece.color, piece.row, piece.col);
 
                 if (newRow == 0 || newRow == BOARD_SIZE - 1){
                     new_piece = create_piece(toupper(piece.color), piece.row, piece.col);

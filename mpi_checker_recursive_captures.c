@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>  // For tolower()/toupper()
+#include <mpi.h>
 
 #define BOARD_SIZE 8  // Standard checkers board size
 
@@ -292,6 +293,9 @@ void predict_all_moves(int moves_ahead, Board inital_board, BoardList final_poss
     }
     final_possibilities = current_turn;
 }
+
+// Import Cuda aspect of program
+extern void runCudaAnalysis(Boardlist *board, int *r_likelihood, int *b_likelihood);
 
 int main() {
     // Initialize the board

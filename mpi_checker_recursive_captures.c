@@ -207,8 +207,8 @@ void single_captured_possibilities(Board board, Piece piece, BoardList *capture_
 
         // Valid capture
         if (isValidPos(newRow, newCol) && isValidPos(middleRow, middleCol)) {
-            if (board.board[middleRow][middleCol] == opponentColor || 
-                board.board[middleRow][middleCol] == toupper(opponentColor)) {
+            if ((board.board[middleRow][middleCol] == opponentColor || 
+                board.board[middleRow][middleCol] == toupper(opponentColor)) && board.board[newRow][newCol] == '.') {
                     
                 Board new_board = copy_board(&board);
                 Piece new_piece = create_piece(piece.color, piece.row, piece.col);

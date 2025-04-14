@@ -329,7 +329,6 @@ void getAllMovesAhead(int movesAhead, Board initBoard, BoardList* finalBoards, c
     } 
     else {
         for (unsigned int i = 0; i < immediateMoves.count; i++) {
-            printf("Hello\n");
             getAllMovesAhead(movesAhead - 1, *immediateMoves.boards[i], finalBoards, nextColor);
         }
     }

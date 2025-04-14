@@ -388,9 +388,30 @@ int main() {
 
     // Changing to custom board for tests ----------------------------------------------------------------------------------------
     board = initial_blank_board();
-    add_piece_to_board(&board, 5, 1, 'b');
-    add_piece_to_board(&board, 6, 2, 'r');
-    add_piece_to_board(&board, 3, 1, 'b');
+    add_piece_to_board(&board, 0, 1, 'b');
+    add_piece_to_board(&board, 0, 3, 'b');
+    add_piece_to_board(&board, 0, 5, 'b');
+    add_piece_to_board(&board, 0, 7, 'b');
+    add_piece_to_board(&board, 1, 0, 'b');
+    add_piece_to_board(&board, 1, 2, 'b');
+    add_piece_to_board(&board, 1, 4, 'b');
+    add_piece_to_board(&board, 1, 6, 'b');
+    add_piece_to_board(&board, 2, 1, 'b');
+    add_piece_to_board(&board, 2, 3, 'b');
+    add_piece_to_board(&board, 2, 5, 'b');
+    add_piece_to_board(&board, 2, 7, 'b');
+    add_piece_to_board(&board, 5, 0, 'r');
+    add_piece_to_board(&board, 5, 2, 'r');
+    add_piece_to_board(&board, 5, 4, 'r');
+    add_piece_to_board(&board, 5, 6, 'r');
+    add_piece_to_board(&board, 6, 1, 'r');
+    add_piece_to_board(&board, 6, 3, 'r');
+    add_piece_to_board(&board, 6, 5, 'r');
+    add_piece_to_board(&board, 6, 7, 'r');
+    add_piece_to_board(&board, 7, 0, 'r');
+    add_piece_to_board(&board, 7, 2, 'r');
+    add_piece_to_board(&board, 7, 4, 'r');
+    add_piece_to_board(&board, 7, 6, 'r');
     
     // Index all red pieces
     red_pieces = index_pieces(board, 'r');
@@ -407,32 +428,19 @@ int main() {
     }
     
     // Test capturing possibilities
-    BoardList capture_results;
-    init_board_list(&capture_results, 5);
+    BoardList board_results;
+    init_board_list(&board_results, 5);
 
     printf("\nTEST Board:\n");
     print_board(&board);
 
-    if (red_pieces.count > 0) {
-        printf("\nGenerating capture possibilities for first red piece...\n");
-        single_captured_possibilities(board, red_pieces.pieces[0], &capture_results);
+    getAllMovesAhead(8, board, &board_results, 'r');
+    for (unsigned int i = 0; i < board_results.count; i+=50000) {
+        printf("Board Possibility %d:\n", i + 1);
+        print_board(board_results.boards[i]);
     }
 
-    if (black_pieces.count > 0) {
-        printf("\nGenerating capture possibilities for second black piece...\n");
-        single_captured_possibilities(board, black_pieces.pieces[1], &capture_results);
-    }
-
-    // Print all possible captured boards
-    printf("\nGenerated %d capture possibilities:\n", capture_results.count);
-    for (unsigned int i = 0; i < capture_results.count; i++) {
-        printf("Capture Possibility %d:\n", i + 1);
-        print_board(capture_results.boards[i]);
-    }
-
-    // Clean up dynamically allocated memory
-    free_board_list(&capture_results);
-
+    free_board_list(&board_results);
     return 0;
 }
 

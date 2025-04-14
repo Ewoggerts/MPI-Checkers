@@ -297,6 +297,48 @@ void predict_all_moves(int moves_ahead, Board inital_board, BoardList final_poss
     final_possibilities = current_turn;
 }
 
+
+void getAllMovesAhead(int movesAhead, Board initBoard, BoardList* finalBoards, char startColor){
+    if(movesAhead<=0){
+        return;
+    }
+
+    // Find all the moves that can be made
+    // Assume you have to jump if you can
+    BoardList immediateMoves;
+    init_board_list(&immediateMoves, 5);
+    all_capture_possibilties(initBoard, startColor, &immediateMoves);
+    if (immediateMoves.count == 0) {
+        all_nojump_posibilities(initBoard, startColor, &immediateMoves);
+    }
+    if (immediateMoves.count == 0) {
+        add_to_board_list(finalBoards, &initBoard); 
+    }
+
+    //Either add the boards to the results or recurse further
+    char nextColor;
+    if(startColor == 'r'){
+        nextColor = 'b';
+    } else{
+        nextColor = 'r';
+    }
+    if (movesAhead == 1) {
+        for (unsigned int i = 0; i < immediateMoves.count; i++) {
+            add_to_board_list(finalBoards, immediateMoves.boards[i]); 
+        }
+    } 
+    else {
+        for (unsigned int i = 0; i < immediateMoves.count; i++) {
+            printf("Hello\n");
+            getAllMovesAhead(movesAhead - 1, *immediateMoves.boards[i], finalBoards, nextColor);
+        }
+    }
+
+    free_board_list(&immediateMoves);
+}
+
+
+
 int main() {
     // Initialize the board
     Board board = initial_board();

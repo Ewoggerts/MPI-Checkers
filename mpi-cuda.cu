@@ -84,8 +84,8 @@ void runCudaAnalysis(BoardList *boards, int *likelihood) {
     const unsigned long long BATCH_SIZE = boards->count;
 
     int *d_winners;
-    cudaMemset(d_winners, 0, sizeof(int) * BATCH_SIZE);
     cudaMalloc(&d_winners, sizeof(int) * BATCH_SIZE);
+    cudaMemset(d_winners, 0, sizeof(int) * BATCH_SIZE);
 
     analyze<<<BATCH_SIZE, 64>>>(d_boards, d_winners);
 

@@ -84,8 +84,17 @@ void runCudaAnalysis(BoardList *boards, int *likelihood) {
     const unsigned long long BATCH_SIZE = boards->count;
 
     BoardList *d_boards;
-    cudaMalloc(&d_boards, sizeof(BoardList));
-    cudaMemcpy(d_boards, boards, sizeof(BoardList), cudaMemcpyHostToDevice);
+    cudaMalloc(&d_boards, sizeof(Board) * boards->count);
+
+    allBoards = new Board[boards->count];
+    for(int i = 0; i<boards->count; i++){
+        allBoards[i] = *(boards->boards[i]);
+    }
+
+
+
+    cudaMemcpy(d_boards, allBoards, sizeof(Board) * boards->count, cudaMemcpyHostToDevice);
+    delete[] allBoards;
 
     int *d_winners;
     cudaMalloc(&d_winners, sizeof(int) * BATCH_SIZE);

@@ -1,7 +1,8 @@
 #include <cuda_runtime.h>
 #include <curand.h>
 #include <iostream>
-#include <mpi_checker_recursive_captures>
+#include "structs.h"
+//#include <mpi_checker_recursive_captures>
 
 #define THREADS_PER_BLOCK 64  // Define the number of threads per block
 
@@ -83,15 +84,13 @@ __global__ void reduce(int *d_winners, int *d_finalResult, int BATCH_SIZE) {
 void runCudaAnalysis(BoardList *boards, int *likelihood) {
     const unsigned long long BATCH_SIZE = boards->count;
 
-    BoardList *d_boards;
+    Board *d_boards;
     cudaMalloc(&d_boards, sizeof(Board) * boards->count);
 
-    allBoards = new Board[boards->count];
+    Board* allBoards = new Board[boards->count];
     for(int i = 0; i<boards->count; i++){
         allBoards[i] = *(boards->boards[i]);
     }
-
-
 
     cudaMemcpy(d_boards, allBoards, sizeof(Board) * boards->count, cudaMemcpyHostToDevice);
     delete[] allBoards;

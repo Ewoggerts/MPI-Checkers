@@ -3,8 +3,10 @@
 #include <string.h>
 #include <stdbool.h>
 #include <ctype.h>  // For tolower()/toupper()
-#include <mpi.h>
+#include "structs.h"
+//#include <mpi.h>
 
+/*
 #define BOARD_SIZE 8  // Standard checkers board size
 
 typedef struct {
@@ -27,6 +29,7 @@ typedef struct {
     unsigned int count;
     unsigned int capacity;
 } BoardList;
+ */
 
 Piece create_piece(char color, int row, int col) {
     Piece p;
@@ -338,7 +341,7 @@ void getAllMovesAhead(int movesAhead, Board initBoard, BoardList* finalBoards, c
 
 
 // Import Cuda aspect of program
-extern void runCudaAnalysis(Boardlist *board, int *r_likelihood, int *b_likelihood);
+extern void runCudaAnalysis(BoardList *boards, int *likelihood);
 
 int main() {
     // Initialize the board
@@ -436,11 +439,13 @@ int main() {
     printf("\nTEST Board:\n");
     print_board(&board);
 
-    getAllMovesAhead(8, board, &board_results, 'r');
-    for (unsigned int i = 0; i < board_results.count; i+=50000) {
-        printf("Board Possibility %d:\n", i + 1);
-        print_board(board_results.boards[i]);
-    }
+    getAllMovesAhead(12, board, &board_results, 'r');
+    printf("%d results\n", board_results.count);
+
+    int likelihood;
+    runCudaAnalysis(&board_results, &likelihood);
+
+    printf("Output: %d\n", likelihood);
 
     free_board_list(&board_results);
     return 0;

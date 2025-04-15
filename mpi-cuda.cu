@@ -83,6 +83,10 @@ __global__ void reduce(int *d_winners, int *d_finalResult, int BATCH_SIZE) {
 void runCudaAnalysis(BoardList *boards, int *likelihood) {
     const unsigned long long BATCH_SIZE = boards->count;
 
+    BoardList *d_boards;
+    cudaMalloc(&d_boards, sizeof(BoardList));
+    cudaMemcpy(d_boards, boards, sizeof(BoardList), cudaMemcpyHostToDevice);
+
     int *d_winners;
     cudaMalloc(&d_winners, sizeof(int) * BATCH_SIZE);
     cudaMemset(d_winners, 0, sizeof(int) * BATCH_SIZE);
@@ -112,6 +116,7 @@ void runCudaAnalysis(BoardList *boards, int *likelihood) {
     *likelihood = finalResult;
 
     // Free allocated memory
+    cudaFree(d_boards);
     cudaFree(d_winners);
     cudaFree(d_finalResult);
 }

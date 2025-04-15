@@ -98,7 +98,7 @@ void runCudaAnalysis(BoardList *boards, int *likelihood) {
     cudaMemset(d_finalResult, 0, sizeof(int));
 
     // Launch the reduction kernel
-    int threadsPerBlock = 256;
+    int threadsPerBlock = 64;
     int numBlocks = (BATCH_SIZE + threadsPerBlock - 1) / threadsPerBlock;
     reduce<<<numBlocks, threadsPerBlock>>>(d_winners, d_finalResult, BATCH_SIZE);
 

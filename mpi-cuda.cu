@@ -11,7 +11,7 @@ extern "C"
 }
 
 // CUDA kernel to count points inside the unit circle
-__global__ void analyze(BoardList *boards, int *winner) {
+__global__ void analyze(Board *boards, int *winner) {
     int local_tid = threadIdx.x;
     int boardIdx = blockIdx.x;
 
@@ -27,7 +27,7 @@ __global__ void analyze(BoardList *boards, int *winner) {
     }
     __syncthreads();
 
-    Board current_board = boards->board[boardIdx];
+    Board current_board = boards[boardIdx];
     char piece = current_board.board[row][col];
 
     if (piece == 'r' || piece == 'R') {

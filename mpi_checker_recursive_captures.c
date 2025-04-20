@@ -125,6 +125,27 @@ void print_board(Board *board) {
     }
 }
 
+void print_board_file(Board *board, char *message, size_t max_len) {
+    int pos = 0;
+
+    // Column headers
+    pos += snprintf(message + pos, max_len - pos, "   ");
+    for (int col = 0; col < 8; col++) {
+        pos += snprintf(message + pos, max_len - pos, "%d ", col);
+    }
+    pos += snprintf(message + pos, max_len - pos, "\n");
+
+    // Board rows
+    for (int row = 0; row < 8; row++) {
+        pos += snprintf(message + pos, max_len - pos, "%d  ", row);
+        for (int col = 0; col < 8; col++) {
+            pos += snprintf(message + pos, max_len - pos, "%c ", board->board[row][col]);
+        }
+        pos += snprintf(message + pos, max_len - pos, "\n");
+    }
+}
+
+
 void move_piece(Board *board, Piece *piece, int new_row, int new_col){
     int row = piece->row;
     int col = piece->col;

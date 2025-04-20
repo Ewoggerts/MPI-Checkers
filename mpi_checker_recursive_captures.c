@@ -5,32 +5,8 @@
 #include <ctype.h>  // For tolower()/toupper()
 #include "structs.h"
 #include <mpi.h>
-#include <time.h>  // for seeding randomness
+#include <math.h>
 
-/*
-#define BOARD_SIZE 8  // Standard checkers board size
-
-typedef struct {
-    int row;
-    int col;
-    char color;
-} Piece;
-
-typedef struct {
-    Piece pieces[12];
-    unsigned int count;
-} PieceList;
-
-typedef struct {
-    char board[BOARD_SIZE][BOARD_SIZE];
-} Board;
-
-typedef struct {
-    Board** boards;
-    unsigned int count;
-    unsigned int capacity;
-} BoardList;
- */
 
 Piece create_piece(char color, int row, int col) {
     Piece p;
@@ -212,7 +188,7 @@ void generate_random_checkers_board(Board *board, int seed) {
     int blackCount = 0;
     int maxPieces = 12;
 
-    srand(seed); 
+    srand(pow(2, seed)); 
 
     for (int row = 0; row < BOARD_SIZE; row++) {
         for (int col = 0; col < BOARD_SIZE; col++) {
@@ -407,52 +383,6 @@ void getAllMovesAhead(int movesAhead, Board initBoard, BoardList* finalBoards, c
 extern void runCudaAnalysis(BoardList *boards, int *likelihood);
 
 int main() {
-    // Initialize the board
-    Board board = initial_board();
-    printf("Initial Board:\n");
-    print_board(&board);
-
-    // Index all red pieces
-    PieceList red_pieces = index_pieces(board, 'r');
-    printf("Indexed %d red pieces:\n\n", red_pieces.count);
-    for (unsigned int i = 0; i < red_pieces.count; i++) {
-        printf("Red Piece %d: (%d, %d)\n", i + 1, red_pieces.pieces[i].row, red_pieces.pieces[i].col);
-    }
-
-    printf("\n");
-
-    // Index all black pieces
-    PieceList black_pieces = index_pieces(board, 'b');
-    printf("Indexed %d black pieces:\n\n", black_pieces.count);
-    for (unsigned int i = 0; i < black_pieces.count; i++) {
-        printf("Black Piece %d: (%d, %d)\n", i + 1, black_pieces.pieces[i].row, black_pieces.pieces[i].col);
-    }
-
-    // Test moving a piece
-    if (red_pieces.count > 0) {
-        Piece test_piece = red_pieces.pieces[0];
-        printf("\nMoving first red piece from (%d, %d)...\n", test_piece.row, test_piece.col);
-        
-        int new_row = test_piece.row + 1;
-        int new_col = test_piece.col + 1;
-
-        if (isValidPos(new_row, new_col)) {
-            move_piece(&board, &test_piece, new_row, new_col);
-            printf("Board after moving piece:\n");
-            print_board(&board);
-        }
-    }
-
-    // Test removing a piece
-    if (black_pieces.count > 0) {
-        Piece test_piece = black_pieces.pieces[0];
-        printf("\nRemoving first black piece at (%d, %d)...\n", test_piece.row, test_piece.col);
-        remove_piece(&board, test_piece.row, test_piece.col);
-        printf("Board after removing piece:\n");
-        print_board(&board);
-    }
-
-    printf("\n----------------------------------------------------------------------------\n");
 
     MPI_Init(NULL, NULL);
 
@@ -474,7 +404,7 @@ int main() {
 
 
     char board_output[1024];
-    print_board_file(&board, board_output, sizeof(board_output));
+    print_board_file(&random_board, board_output, sizeof(board_output));
     
     // Test capturing possibilities
     BoardList board_results;
@@ -483,7 +413,7 @@ int main() {
     //printf("\nTEST Board:\n");
     //print_board(&board);
 
-    getAllMovesAhead(6, random_board, &board_results, 'r');
+    getAllMovesAhead(8, random_board, &board_results, 'r');
     //printf("%d results\n", board_results.count);
     printf("Rank %d generated %d boards.\n", rank, board_results.count);
 

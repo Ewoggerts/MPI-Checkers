@@ -462,55 +462,19 @@ int main() {
 
     printf("MPI Rank %d of %d starting...\n", rank, size);
 
-    // Changing to custom board for tests ----------------------------------------------------------------------------------------
-    /*
-    board = initial_blank_board();
-    add_piece_to_board(&board, 0, 1, 'b');
-    add_piece_to_board(&board, 0, 3, 'b');
-    add_piece_to_board(&board, 0, 5, 'b');
-    add_piece_to_board(&board, 0, 7, 'b');
-    add_piece_to_board(&board, 1, 0, 'b');
-    add_piece_to_board(&board, 1, 2, 'b');
-    add_piece_to_board(&board, 1, 4, 'b');
-    add_piece_to_board(&board, 1, 6, 'b');
-    add_piece_to_board(&board, 2, 1, 'b');
-    add_piece_to_board(&board, 2, 3, 'b');
-    add_piece_to_board(&board, 2, 5, 'b');
-    add_piece_to_board(&board, 2, 7, 'b');
-    add_piece_to_board(&board, 5, 0, 'r');
-    add_piece_to_board(&board, 5, 2, 'r');
-    add_piece_to_board(&board, 5, 4, 'r');
-    add_piece_to_board(&board, 5, 6, 'r');
-    add_piece_to_board(&board, 6, 1, 'r');
-    add_piece_to_board(&board, 6, 3, 'r');
-    add_piece_to_board(&board, 6, 5, 'r');
-    add_piece_to_board(&board, 6, 7, 'r');
-    add_piece_to_board(&board, 7, 0, 'r');
-    add_piece_to_board(&board, 7, 2, 'r');
-    add_piece_to_board(&board, 7, 4, 'r');
-    add_piece_to_board(&board, 7, 6, 'r');
-    */
     Board random_board;
     generate_random_checkers_board(&random_board, rank);
 
+    MPI_File fh;
+    MPI_Offset offset = rank * 1024;
+    MPI_File_open(MPI_COMM_WORLD, "boards_output.txt", MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+
     printf("Rank %d custom board initialized.\n", rank);
     print_board(&random_board);
-    
-    // Index all red pieces
-    /*
-    red_pieces = index_pieces(board, 'r');
-    printf("Indexed %d red pieces:\n\n", red_pieces.count);
-    for (unsigned int i = 0; i < red_pieces.count; i++) {
-        printf("Red Piece %d: (%d, %d)\n", i + 1, red_pieces.pieces[i].row, red_pieces.pieces[i].col);
-    }
 
-    // Index all black pieces
-    black_pieces = index_pieces(board, 'b');
-    printf("Indexed %d black pieces:\n\n", black_pieces.count);
-    for (unsigned int i = 0; i < black_pieces.count; i++) {
-        printf("Black Piece %d: (%d, %d)\n", i + 1, black_pieces.pieces[i].row, black_pieces.pieces[i].col);
-    }
-        */
+
+    char board_output[1024];
+    print_board_file(&board, board_output, sizeof(board_output));
     
     // Test capturing possibilities
     BoardList board_results;
@@ -528,6 +492,11 @@ int main() {
 
     //printf("Output: %d\n", likelihood);
     printf("Rank %d Cuda Analysis Output: %d\n", rank, likelihood);
+
+    snprintf(board_output + strlen(board_output), sizeof(board_output) - strlen(board_output), "\nRank %d Cuda Analysis Output: %d\n", rank, likelihood);
+
+    MPI_File_write_at(fh, offset, board_output, strlen(board_output), MPI_CHAR, MPI_STATUS_IGNORE);
+    MPI_File_close(&fh);
 
     free_board_list(&board_results);
 

@@ -7,6 +7,7 @@
 #include <mpi.h>
 #include <math.h>
 
+#define TOTAL_BOARDS 1024
 
 Piece create_piece(char color, int row, int col) {
     Piece p;
@@ -188,7 +189,7 @@ void generate_random_checkers_board(Board *board, int seed) {
     int blackCount = 0;
     int maxPieces = 12;
 
-    srand(pow(2, seed)); 
+    srand((1+seed)*17); 
 
     for (int row = 0; row < BOARD_SIZE; row++) {
         for (int col = 0; col < BOARD_SIZE; col++) {
@@ -390,45 +391,51 @@ int main() {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
+    char filename[256];
+    sprintf(filename, "boards_output_%d_ranks.txt", size);
+
     printf("MPI Rank %d of %d starting...\n", rank, size);
 
-    Board random_board;
-    generate_random_checkers_board(&random_board, rank);
+    int boardsPerRank = TOTAL_BOARDS / size;
+    int left = TOTAL_BOARDS % size;
+    if (rank < left) {
+        boardsPerRank++;
+    }
+
 
     MPI_File fh;
-    MPI_Offset offset = rank * 1024;
-    MPI_File_open(MPI_COMM_WORLD, "boards_output.txt", MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
+    MPI_Offset offset = rank * (512 * boardsPerRank);
+    MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
 
-    printf("Rank %d custom board initialized.\n", rank);
-    print_board(&random_board);
+    char output_buffer[512 * boardsPerRank];
 
+    for (int i = 0; i < boardsPerRank; i++) {
+        Board random_board;
+        generate_random_checkers_board(&random_board, size * i + rank);
 
-    char board_output[1024];
-    print_board_file(&random_board, board_output, sizeof(board_output));
-    
-    // Test capturing possibilities
-    BoardList board_results;
-    init_board_list(&board_results, 5);
+        BoardList board_results;
+        init_board_list(&board_results, 10);
 
-    //printf("\nTEST Board:\n");
-    //print_board(&board);
+        getAllMovesAhead(8, random_board, &board_results, 'r');
 
-    getAllMovesAhead(8, random_board, &board_results, 'r');
-    //printf("%d results\n", board_results.count);
-    printf("Rank %d generated %d boards.\n", rank, board_results.count);
+        int likelihood = 0;
+        runCudaAnalysis(&board_results, &likelihood);
 
-    int likelihood = 0 ;
-    runCudaAnalysis(&board_results, &likelihood);
+        char board_output[512];
+        print_board_file(&random_board, board_output, sizeof(board_output));
 
-    //printf("Output: %d\n", likelihood);
-    printf("Rank %d Cuda Analysis Output: %d\n", rank, likelihood);
+        snprintf(board_output + strlen(board_output), sizeof(board_output) - strlen(board_output), "\nRank %d Cuda Analysis Output: %d\n", rank, likelihood);
 
-    snprintf(board_output + strlen(board_output), sizeof(board_output) - strlen(board_output), "\nRank %d Cuda Analysis Output: %d\n", rank, likelihood);
+        strncat(output_buffer, board_output, sizeof(output_buffer) - strlen(output_buffer) - 1);
 
-    MPI_File_write_at(fh, offset, board_output, strlen(board_output), MPI_CHAR, MPI_STATUS_IGNORE);
+        free_board_list(&board_results);
+    }
+
+    MPI_File_write_at(fh, offset, output_buffer, strlen(output_buffer), MPI_CHAR, MPI_STATUS_IGNORE);
     MPI_File_close(&fh);
 
-    free_board_list(&board_results);
+    printf("Rank %d finished processing %d boards.\n", rank, boardsPerRank);
+
 
     MPI_Finalize();
     return 0;

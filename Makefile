@@ -1,17 +1,22 @@
-CC=gcc
+MPICC=mpicc
 NVCC=nvcc
 
-all: my_program
+# Target
+TARGET=my_program
 
-my_program: main.o kernel.o
-	$(NVCC) main.o kernel.o -o my_program
+# Files
+OBJS=main.o kernel.o
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(NVCC) $(OBJS) -o $(TARGET) -lmpi
 
 main.o: mpi_checker_recursive_captures.c
-	$(CC) -c mpi_checker_recursive_captures.c -o main.o
+	$(MPICC) -c mpi_checker_recursive_captures.c -o main.o
 
 kernel.o: mpi-cuda.cu
 	$(NVCC) -c mpi-cuda.cu -o kernel.o
 
 clean:
-	rm -f *.o my_program
-
+	rm -f *.o $(TARGET)

@@ -4,7 +4,8 @@
 #include <stdbool.h>
 #include <ctype.h>  // For tolower()/toupper()
 #include "structs.h"
-//#include <mpi.h>
+#include <mpi.h>
+#include <time.h>  // for seeding randomness
 
 /*
 #define BOARD_SIZE 8  // Standard checkers board size
@@ -177,6 +178,47 @@ PieceList index_pieces(Board board, char color) {
     }
     
     return pieces;
+}
+
+void generate_random_checkers_board(Board *board, int seed) {
+    for (int row = 0; row < BOARD_SIZE; row++) {
+        for (int col = 0; col < BOARD_SIZE; col++) {
+            board->board[row][col] = '.';
+        }
+    }
+
+    int redCount = 0;
+    int blackCount = 0;
+    int maxPieces = 12;
+
+    srand(seed); 
+
+    for (int row = 0; row < BOARD_SIZE; row++) {
+        for (int col = 0; col < BOARD_SIZE; col++) {
+            if ((row + col) % 2 == 1) {
+                int randNum = rand() % 100;
+                if (randNum < 20 && redCount < maxPieces) {
+                    if(row == 0){
+                        board->board[row][col] = 'R';
+                    }
+                    else{
+                        board->board[row][col] = 'r';
+                    }
+                    redCount++; 
+                } else if (randNum >= 20 && randNum < 40 && blackCount < maxPieces) {
+                    if(row == BOARD_SIZE-1){
+                        board->board[row][col] = 'B';
+                    }
+                    else{
+                        board->board[row][col] = 'b';
+                    }
+                    blackCount++;
+                } else {
+                    board->board[row][col] = '.';
+                }
+            }
+        }
+    }
 }
 
 int isValidPos(int row, int col) {
@@ -391,7 +433,16 @@ int main() {
 
     printf("\n----------------------------------------------------------------------------\n");
 
+    MPI_Init(NULL, NULL);
+
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    printf("MPI Rank %d of %d starting...\n", rank, size);
+
     // Changing to custom board for tests ----------------------------------------------------------------------------------------
+    /*
     board = initial_blank_board();
     add_piece_to_board(&board, 0, 1, 'b');
     add_piece_to_board(&board, 0, 3, 'b');
@@ -417,8 +468,15 @@ int main() {
     add_piece_to_board(&board, 7, 2, 'r');
     add_piece_to_board(&board, 7, 4, 'r');
     add_piece_to_board(&board, 7, 6, 'r');
+    */
+    Board random_board;
+    generate_random_checkers_board(&random_board, rank);
+
+    printf("Rank %d custom board initialized.\n", rank);
+    print_board(&random_board);
     
     // Index all red pieces
+    /*
     red_pieces = index_pieces(board, 'r');
     printf("Indexed %d red pieces:\n\n", red_pieces.count);
     for (unsigned int i = 0; i < red_pieces.count; i++) {
@@ -431,23 +489,28 @@ int main() {
     for (unsigned int i = 0; i < black_pieces.count; i++) {
         printf("Black Piece %d: (%d, %d)\n", i + 1, black_pieces.pieces[i].row, black_pieces.pieces[i].col);
     }
+        */
     
     // Test capturing possibilities
     BoardList board_results;
     init_board_list(&board_results, 5);
 
-    printf("\nTEST Board:\n");
-    print_board(&board);
+    //printf("\nTEST Board:\n");
+    //print_board(&board);
 
-    getAllMovesAhead(12, board, &board_results, 'r');
-    printf("%d results\n", board_results.count);
+    getAllMovesAhead(6, random_board, &board_results, 'r');
+    //printf("%d results\n", board_results.count);
+    printf("Rank %d generated %d boards.\n", rank, board_results.count);
 
-    int likelihood;
+    int likelihood = 0 ;
     runCudaAnalysis(&board_results, &likelihood);
 
-    printf("Output: %d\n", likelihood);
+    //printf("Output: %d\n", likelihood);
+    printf("Rank %d Cuda Analysis Output: %d\n", rank, likelihood);
 
     free_board_list(&board_results);
+
+    MPI_Finalize();
     return 0;
 }
 

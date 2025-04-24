@@ -12,7 +12,7 @@
 typedef unsigned long long ticks;
 
 static __inline__ ticks getticks(void){
-  /*unsigned int tbl, tbu0, tbu1;
+  unsigned int tbl, tbu0, tbu1;
 
   do {
     __asm__ __volatile__ ("mftbu %0" : "=r"(tbu0));
@@ -21,8 +21,6 @@ static __inline__ ticks getticks(void){
   } while (tbu0 != tbu1);
 
   return (((unsigned long long)tbu0) << 32) | tbl;
-  */
-  return 1;
 }
 
 Piece create_piece(char color, int row, int col) {

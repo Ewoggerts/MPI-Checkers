@@ -8,6 +8,22 @@
 #include <math.h>
 
 #define TOTAL_BOARDS 1024
+#define BOARD_SIZE 8
+typedef unsigned long long ticks;
+
+static __inline__ ticks getticks(void){
+  /*unsigned int tbl, tbu0, tbu1;
+
+  do {
+    __asm__ __volatile__ ("mftbu %0" : "=r"(tbu0));
+    __asm__ __volatile__ ("mftb %0" : "=r"(tbl));
+    __asm__ __volatile__ ("mftbu %0" : "=r"(tbu1));
+  } while (tbu0 != tbu1);
+
+  return (((unsigned long long)tbu0) << 32) | tbl;
+  */
+  return 1;
+}
 
 Piece create_piece(char color, int row, int col) {
     Piece p;
@@ -379,12 +395,50 @@ void getAllMovesAhead(int movesAhead, Board initBoard, BoardList* finalBoards, c
     free_board_list(&immediateMoves);
 }
 
+int analyze_serial(Board* board){
+    int redCount = 0;
+    int blackCount = 0;
+
+    for (int row = 0; row < 8; ++row) {
+        for (int col = 0; col < 8; ++col) {
+            char piece = board->board[row][col];
+            if (piece == 'r' || piece == 'R') {
+                redCount++;
+            } else if (piece == 'b' || piece == 'B') {
+                blackCount++;
+            }
+        }
+    }
+
+    if (redCount > blackCount) {
+        return -1; // Red wins
+    } else if (blackCount > redCount) {
+        return 1;  // Black wins
+    } else {
+        return 0;  // Tie
+    }
+}
+
+void runCudaAnalysis_serial(BoardList* boards, int* likelihood) {
+    int finalResult = 0;
+
+    for (unsigned long long i = 0; i < boards->count; ++i) {
+        Board* current = boards->boards[i];
+        finalResult += analyze_serial(current);
+    }
+
+    *likelihood = finalResult;
+}
+
 
 // Import Cuda aspect of program
 extern void runCudaAnalysis(BoardList *boards, int *likelihood);
 
 int main() {
-
+    ticks start=0;
+    ticks finish=0;
+    
+    start = getticks();
     MPI_Init(NULL, NULL);
 
     int rank, size;
@@ -397,10 +451,13 @@ int main() {
     printf("MPI Rank %d of %d starting...\n", rank, size);
 
     int boardsPerRank = TOTAL_BOARDS / size;
+    //int boardsPerRank = TOTAL_BOARDS;
+    
     int left = TOTAL_BOARDS % size;
     if (rank < left) {
         boardsPerRank++;
     }
+    
 
 
     MPI_File fh;
@@ -421,21 +478,35 @@ int main() {
         int likelihood = 0;
         runCudaAnalysis(&board_results, &likelihood);
 
+	double possibilityBlack = (board_results.count+likelihood) / (double) (board_results.count * 2);
+
         char board_output[512];
         print_board_file(&random_board, board_output, sizeof(board_output));
 
-        snprintf(board_output + strlen(board_output), sizeof(board_output) - strlen(board_output), "\nRank %d Cuda Analysis Output: %d\n", rank, likelihood);
+        snprintf(board_output + strlen(board_output), sizeof(board_output) - strlen(board_output), "\nEstimated Chance of Black Winning: %f percent.\n", possibilityBlack*100);
 
         strncat(output_buffer, board_output, sizeof(output_buffer) - strlen(output_buffer) - 1);
 
         free_board_list(&board_results);
     }
 
-    MPI_File_write_at(fh, offset, output_buffer, strlen(output_buffer), MPI_CHAR, MPI_STATUS_IGNORE);
+    MPI_Barrier(MPI_COMM_WORLD);
+    finish = getticks();
+
+    ticks io_start = getticks();
+    MPI_File_write_at_all(fh, offset, output_buffer, strlen(output_buffer), MPI_CHAR, MPI_STATUS_IGNORE);
+    ticks io_end = getticks();
+    ticks io_time = io_end - io_start;
+
     MPI_File_close(&fh);
 
     printf("Rank %d finished processing %d boards.\n", rank, boardsPerRank);
-
+    //MPI_Barrier(MPI_COMM_WORLD);
+    if(rank == 0){
+	//finish = getticks();
+        printf("Computed 1024 boards in %llu ticks\n", (finish - start));
+        printf("I/O time across %d ranks: %llu ticks\n", size, io_time);
+    }
 
     MPI_Finalize();
     return 0;
